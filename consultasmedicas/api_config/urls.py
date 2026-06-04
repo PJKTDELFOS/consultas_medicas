@@ -16,9 +16,15 @@ Including another URLconf
 """
 
 from django.urls import path,include
+from rest_framework.routers import DefaultRouter
+from django.conf import settings
+from django.conf.urls.static import static
 
+
+router=DefaultRouter()
 
 app_name = 'consultasmedicas'
 urlpatterns = [
-    path('api/',include('consultasmedicas.api_config.urls')),
+    path('',include(router.urls)),
 ]
+

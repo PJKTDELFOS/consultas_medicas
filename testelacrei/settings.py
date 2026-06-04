@@ -10,9 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 
-from decouple import config
+from config_envs import Config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,13 +22,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = Config.SECRET_KEY
 MIRAGE_SECRET_KEY = SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = Config.DEBUG
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = [host.strip() for host in Config.ALLOWED_HOSTS.split(',')]
 
 # Application definition
 
@@ -42,11 +43,13 @@ INSTALLED_APPS = [
     'consultasmedicas',
     'axes',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'mirage'
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -82,11 +85,11 @@ WSGI_APPLICATION = 'testelacrei.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
+        'NAME': Config.dbname,
+        'USER': Config.user,
+        'PASSWORD': Config.password,
+        'HOST': Config.host,
+        'PORT': Config.port,
         'OPTIONS': {
             'client_encoding': 'UTF8',
         },
@@ -135,12 +138,19 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# axes-config
+AXES_FAILURE_LIMIT = 10  # tentativas de login permitidas
+AXES_COOLOFF_TIME = 0.1  # em horas; tempo que o IP ficará bloqueado
+AXES_LOCK_OUT_AT_FAILURE = True
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 # STATIC_URL = 'static/'
 # headers de segurança-desabilitar para desenvolvimento
-SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', cast=int, default=31536000)  # 1 ano
+SECURE_HSTS_SECONDS = int(Config.SECURE_HSTS_SECONDS)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_SSL_REDIRECT = not DEBUG
@@ -150,6 +160,10 @@ X_FRAME_OPTIONS = 'DENY'
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 REST_FRAMEWORK = {
+    # exigir o token no inicio da session
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
@@ -166,5 +180,20 @@ REST_FRAMEWORK = {
         'user': '100/day'
     }
 }
+SIMPLE_JWT = {
+    # Tempo que o token de acesso vale (curto por segurança)
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+
+    # Tempo que o usuário pode ficar sem logar de novo usando o refresh token
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+
+    # Permite que o token seja colocado na lista negra ao fazer logout
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+
+    # O texto que o front-end deve enviar no cabeçalho (ex: Bearer <token>)
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
 # lista de URLs do front-end permitidas do .env
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=lambda v: [s.strip() for s in v.split(',')])
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in Config.CORS_ALLOWED_ORIGINS.split(',')]
