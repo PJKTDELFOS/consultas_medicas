@@ -9,7 +9,7 @@ from utilidades.utilitarios import valida_cpf
 
 class Medico(models.Model):
     nomesocial=models.CharField(max_length=120)
-    cpf=EncryptedCharField(max_length=11,validators=[valida_cpf],null=False,
+    cpf=EncryptedCharField(max_length=255,validators=[valida_cpf],null=False,
                          blank=False,unique=True,
                          help_text="Insira um CPF válido (apenas números ou com pontuação")
     email=EncryptedEmailField(max_length=254,null=False,blank=False)

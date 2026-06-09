@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from datetime import timedelta
 from pathlib import Path
-
+import os
 from config_envs import Config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -197,3 +197,62 @@ SIMPLE_JWT = {
 
 # lista de URLs do front-end permitidas do .env
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in Config.CORS_ALLOWED_ORIGINS.split(',')]
+
+#logging
+
+LOGS_DIR=BASE_DIR / 'logs'
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
+
+LOGING_FILE_PATH=LOGS_DIR / 'logs_sistema_consultas.log'
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    # 1. FORMATADORES: Definem a estrutura visual da linha de log
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
+    },
+
+    # 2. HANDLERS: Definem PARA ONDE os logs vão ser enviados
+    'handlers': {
+        # Envia os logs direto para o terminal do contêiner Docker
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        # Grava os logs de forma persistente em um arquivo de texto rotativo
+        'file': {
+            'level': 'WARNING',  # Só grava do nível WARNING para cima (erros, alertas críticos)
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGING_FILE_PATH),
+            'maxBytes': 1024 * 1024 * 5,  # 5 MB por arquivo
+            'backupCount': 5,  # Mantém até 5 arquivos antigos de histórico
+            'formatter': 'verbose',
+        },
+    },
+
+    # 3. LOGGERS: Os emissores que capturam os eventos do ecossistema Django
+    'loggers': {
+        # Captura logs gerais do Django (requisições HTTP, conexões de banco)
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        # Captura logs específicos do banco de dados (opcional, bom para debugar queries)
+        'django.db.backends': {
+            'handlers': ['file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}

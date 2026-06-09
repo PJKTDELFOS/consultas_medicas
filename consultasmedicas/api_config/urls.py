@@ -17,13 +17,14 @@ Including another URLconf
 
 from django.urls import path,include
 from rest_framework.routers import DefaultRouter
-from django.conf import settings
-from django.conf.urls.static import static
-
+from consultasmedicas.api_config import views
 
 router=DefaultRouter()
 
 app_name = 'consultasmedicas'
+
+router.register(r'profissionais',views.ViewMedicos,basename='profissional')
+router.register(r'consulta',views.ViewConsulta,basename='consulta')
 urlpatterns = [
     path('',include(router.urls)),
 ]
